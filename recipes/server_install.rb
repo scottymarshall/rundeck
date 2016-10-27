@@ -54,7 +54,6 @@ end
 
 service 'rundeck' do
   service_name 'rundeckd'
-  provider Chef::Provider::Service::Upstart
   supports status: true, restart: true
   action :nothing
 end
