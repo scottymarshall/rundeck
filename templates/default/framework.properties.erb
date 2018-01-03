@@ -1,8 +1,3 @@
-# framework.properties -
-#
-# $Id: framework.properties.template 2128 2010-08-17 21:29:24Z ahonor $
-#
-
 # ----------------------------------------------------------------
 # Installation specific settings
 # ----------------------------------------------------------------
@@ -44,8 +39,8 @@ framework.email.failonerror = true
 # Custom config
 #
 #
-<% if node.rundeck['custom_framework_config'] %>
-<% node.rundeck['custom_framework_config'].sort.each do |key, value| %>
+<% if node['rundeck']['custom_framework_config'] %>
+<% node['rundeck']['custom_framework_config'].sort.each do |key, value| %>
 <%= key %>=<%= value %>
 <% end %>
 <% end %>
@@ -131,7 +126,7 @@ framework.tmp.dir= ${framework.var.dir}/tmp
 #
 # Base directory where logs are kept
 #
-framework.logs.dir=<%= @rundeck[:basedir] %>/logs
+framework.logs.dir=<%= @rundeck[:exec_logdir] %>
 
 #
 # Date/time stamp format used in logs. See java.text.SimpleDateFormat
@@ -169,20 +164,30 @@ framework.nodeauthentication.classname = com.dtolabs.rundeck.core.authentication
 framework.centraldispatcher.classname = com.dtolabs.client.services.RundeckAPICentralDispatcher
 
 #
+# Rundeck Server UUID
+#
+rundeck.server.uuid = <%= @rundeck_uuid %>
+
+#
 #
 # rdeck server connection.
 #
 framework.server.username = admin
 framework.server.password = <%= (@rundeck_users['admin']['password'] rescue nil) || 'admin' %>
 framework.server.hostname = <%= @rundeck[:hostname] %>
-framework.server.name = <%= node.hostname %>
-framework.server.port = <%= @rundeck[:port] %>
-framework.server.url = http://<%= @rundeck[:hostname] %>:<%= @rundeck[:port] %>
+framework.server.name = <%= node.name %>
 
-#
+<% if @rundeck[:use_inbuilt_ssl] %>
+framework.server.port = <%= @rundeck[:ssl][:port] %>
+framework.server.url = https://<%= @rundeck[:hostname] %>:<%= @rundeck[:ssl][:port] %>
 # URL to Rundeck
-#
+framework.rundeck.url = https://<%= @rundeck[:hostname] %>:<%= @rundeck[:ssl][:port] %>
+<% else %>
+framework.server.port = <%= @rundeck[:port] %>
+framework.server.url = http://localhost:<%= @rundeck[:port] %>
+# URL to Rundeck
 framework.rundeck.url = http://<%= @rundeck[:hostname] %>:<%= @rundeck[:port] %>
+<% end %>
 
 #
 # ssh keypath
@@ -192,7 +197,7 @@ framework.ssh.keypath = <%= @rundeck[:basedir] %>/.ssh/id_rsa
 #
 # ssh user
 #
-framework.ssh.user = <%= @rundeck[:user] %>
+framework.ssh.user = <%= @rundeck['framework.ssh.user'] || @rundeck[:user] %>
 
 
 #
@@ -229,3 +234,9 @@ framework.winrm-protocol = <%= @rundeck[:windows][:winrm_protocol] %>
 
 # winrm connection timeout.  Default: PT60.000S
 framework.winrm-timeout = <%= @rundeck[:windows][:winrm_timeout] %>
+
+
+# Extra properties from Chef attribute ['rundeck']['framework']['properties']
+<% @rundeck['framework']['properties'].to_java_properties_hash.each do |key, value| %>
+<%= key %> = <%= value %>
+<% end %>

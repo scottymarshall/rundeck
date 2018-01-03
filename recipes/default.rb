@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: rundeck
-# Recipe:i: default
+# Recipe: default
 #
 # Copyright 2012, Peter Crossley
 #
@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 case node['platform_family']
 when 'arch', 'debian', 'fedora', 'freebsd', 'mac_os_x', 'rhel', 'suse'
   include_recipe 'rundeck::node_unix'

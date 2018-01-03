@@ -1,12 +1,5 @@
-Style/Encoding:
-  Enabled: false
-LineLength:
-  Max: 160
-MethodLength:
-  Max: 30
-FileName:
-  Enabled: false
-SingleSpaceBeforeFirstArg:
-  Enabled: false
-ParenthesesAsGroupedExpression:
-  Enabled: false
+# SupportedStyles: slashes, percent_r, mixed
+Style/RegexpLiteral:
+  Exclude:
+    - 'libraries/rundeck_api_client.rb'
+    - 'spec/support/rundeck_helpers.rb'

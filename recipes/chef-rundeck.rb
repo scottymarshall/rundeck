@@ -20,35 +20,28 @@
 require 'json'
 
 include_recipe 'rundeck::default'
+include_recipe 'rundeck::_data_bags'
+include_recipe 'rundeck::chef_server_config'
 
-if node['rundeck']['secret_file'].nil?
-  rundeck_secure = data_bag_item(node['rundeck']['rundeck_databag'], node['rundeck']['rundeck_databag_secure'])
-else
-  rundeck_secret = Chef::EncryptedDataBagItem.load_secret(node['rundeck']['secret_file'])
-  rundeck_secure = Chef::EncryptedDataBagItem.load(node['rundeck']['rundeck_databag'], node['rundeck']['rundeck_databag_secure'], rundeck_secret)
-end
-
-bags = data_bag(node['rundeck']['rundeck_projects_databag'])
 projects = {}
-bags.each do |project|
-  pdata = data_bag_item(node['rundeck']['rundeck_projects_databag'], project)
-  projects[project] = {
-    'pattern' => pdata['pattern'],
-    'username' => pdata['username'],
-    'hostname' => pdata['hostname'],
-    'attributes' => pdata['attributes']
+node.run_state['rundeck']['projects'].each do |project_name, data_bag_item_contents|
+  projects[project_name] = {
+    'pattern' => data_bag_item_contents['pattern'],
+    'username' => data_bag_item_contents['username'],
+    'hostname' => data_bag_item_contents['hostname'],
+    'attributes' => data_bag_item_contents['attributes'],
   }
 end
 
 directory node['rundeck']['chef_configdir'] do
-  #owner node[:user][:username]
-  #group node[:user][:username]
+  # owner node[:user][:username]
+  # group node[:user][:username]
   recursive true
 end
 
 file node['rundeck']['project_config'] do
   content JSON.pretty_generate(projects)
-  mode 00644
+  mode '0644'
   notifies :restart, 'service[chef-rundeck]'
 end
 
@@ -65,26 +58,10 @@ end
 
 chef_gem 'sinatra'
 
-template '/etc/chef/rundeck.rb' do
-  owner node['rundeck']['user']
-  group node['rundeck']['group']
-  source 'rundeck.rb.erb'
-  variables(
-    rundeck: node['rundeck']
-  )
-end
-
-file '/etc/chef/rundeck.pem' do
-  content rundeck_secure['chef_rundeck_pem']
-  owner node['rundeck']['user']
-  group node['rundeck']['group']
-  mode 0400
-end
-
 directory node['rundeck']['log_dir'] do
   owner node['rundeck']['user']
   group node['rundeck']['group']
-  mode 00755
+  mode '0755'
 end
 
 file "#{node['rundeck']['log_dir']}/server.log" do
@@ -93,27 +70,44 @@ file "#{node['rundeck']['log_dir']}/server.log" do
   action :create_if_missing
 end
 
-if node['rundeck']['chef_rundeck_use_upstart']
-  template '/etc/init/chef-rundeck.conf' do
-    source 'chef-rundeck.conf.erb'
-    variables(
-      user: node['rundeck']['user'],
-      log_dir: node['rundeck']['log_dir'],
-      chef_config: node['rundeck']['chef_config'],
-      chef_webui_url: node['rundeck']['chef_webui_url'],
-      project_config: node['rundeck']['project_config'],
-      chef_rundeck_host: node['rundeck']['chef_rundeck_host'],
-      chef_rundeck_port: node['rundeck']['chef_rundeck_port'],
-      chef_rundeck_cachetime: node['rundeck']['chef_rundeck_cachetime'],
-      chef_rundeck_partial_search: node['rundeck']['chef_rundeck_partial_search']
-    )
-    notifies :restart, 'service[chef-rundeck]'
-  end
-else
+template '/etc/systemd/system/chef-rundeck.service' do
+  source 'chef-rundeck-systemd.conf.erb'
+  variables(
+    user: node['rundeck']['user'],
+    log_dir: node['rundeck']['log_dir'],
+    chef_config: node['rundeck']['chef_config'],
+    chef_webui_url: node['rundeck']['chef_webui_url'],
+    project_config: node['rundeck']['project_config'],
+    chef_rundeck_host: node['rundeck']['chef_rundeck_host'],
+    chef_rundeck_port: node['rundeck']['chef_rundeck_port'],
+    chef_rundeck_cachetime: node['rundeck']['chef_rundeck_cachetime'],
+    chef_rundeck_partial_search: node['rundeck']['chef_rundeck_partial_search']
+  )
+  only_if { node['rundeck']['chef_rundeck_use_systemd'] }
+  notifies :restart, 'service[chef-rundeck]'
+end
+
+template '/etc/init/chef-rundeck.conf' do
+  source 'chef-rundeck.conf.erb'
+  variables(
+    user: node['rundeck']['user'],
+    log_dir: node['rundeck']['log_dir'],
+    chef_config: node['rundeck']['chef_config'],
+    chef_webui_url: node['rundeck']['chef_webui_url'],
+    project_config: node['rundeck']['project_config'],
+    chef_rundeck_host: node['rundeck']['chef_rundeck_host'],
+    chef_rundeck_port: node['rundeck']['chef_rundeck_port'],
+    chef_rundeck_cachetime: node['rundeck']['chef_rundeck_cachetime'],
+    chef_rundeck_partial_search: node['rundeck']['chef_rundeck_partial_search']
+  )
+  only_if { node['rundeck']['chef_rundeck_use_upstart'] }
+  notifies :restart, 'service[chef-rundeck]'
+end
+
+if node['rundeck']['chef_rundeck_use_runit']
   # Use runit, compatibility for non-Upstart systems and backwards-compatibility
   # for previous versions of this cookbook
   include_recipe 'runit::default'
-
   runit_service 'chef-rundeck' do
     options(
       user: node['rundeck']['user'],
@@ -131,6 +125,11 @@ else
 end
 
 service 'chef-rundeck' do
-  provider Chef::Provider::Service::Upstart if node['rundeck']['chef_rundeck_use_upstart']
-  action :start
+  if node['rundeck']['chef_rundeck_use_systemd']
+    provider Chef::Provider::Service::Systemd
+  end
+  if node['rundeck']['chef_rundeck_use_upstart']
+    provider Chef::Provider::Service::Upstart
+  end
+  action [:start]
 end

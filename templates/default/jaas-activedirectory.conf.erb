@@ -1,11 +1,11 @@
 activedirectory {
-    com.dtolabs.rundeck.jetty.jaas.JettyCachingLdapLoginModule sufficient 
-    debug="true"
+    com.dtolabs.rundeck.jetty.jaas.JettyCachingLdapLoginModule sufficient
+    debug="<%=@ldap[:debug].to_s%>"
     contextFactory="com.sun.jndi.ldap.LdapCtxFactory"
     providerUrl="<%=@ldap[:provider]%>"
-<% unless @ldap[:forcebindinglogin] -%>
-    bindDn="<%=@ldap[:binddn]%>"
-    bindPassword="<%=@ldap[:bindpwd]%>"
+<% if !@ldap[:binddn].nil? -%>
+    bindDn="<%=@binddn%>"
+    bindPassword="<%=@bindpwd%>"
 <% end -%>
     authenticationMethod="<%=@ldap[:authenticationmethod]%>"
     forceBindingLogin="<%=@ldap[:forcebindinglogin]%>"
@@ -28,7 +28,12 @@ activedirectory {
     supplementalRoles="<%=@ldap[:supplementalroles]%>"
 <% end -%>
     reportStatistics="<%=@ldap[:reportstatistics]%>";
-    org.eclipse.jetty.plus.jaas.spi.PropertyFileLoginModule required
-    debug="true"
+
+    <% if Gem::Requirement.new('< 2.7.0').satisfied_by?(Gem::Version.new(@rundeck_version)) %>
+    org.eclipse.jetty.plus.jaas.spi.PropertyFileLoginModule sufficient
+    <% else %>
+    org.eclipse.jetty.jaas.spi.PropertyFileLoginModule sufficient
+    <% end %>
+    debug="<%=@ldap[:debug].to_s%>"
     file="<%=@configdir%>/realm.properties";
 };

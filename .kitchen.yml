@@ -1,23 +1,53 @@
----
 driver:
   name: vagrant
 
 provisioner:
   name: chef_zero
-  require_chef_omnibus: latest
-  chef_omnibus_url: https://www.getchef.com/chef/install.sh
+  deprecations_as_errors: true
+  log_level: info
 
 platforms:
+  - name: centos-7.3
   - name: ubuntu-14.04
     run_list:
-    - "recipe[apt::default]"
+      - recipe[apt]
+  - name: ubuntu-16.04
+    run_list:
+      - recipe[apt]
 
 suites:
-  - name: server
+  - name: default
     run_list:
-      - "recipe[rundeck::server]"
-      - "recipe[create_chef_dir]"
-      - "recipe[rundeck::chef-rundeck]"
+      - recipe[rundeck::server]
+      - recipe[create_chef_dir]
+      - recipe[rundeck::chef-rundeck]
     attributes:
       rundeck:
-        hostname: 'localhost:8080'
+        hostname: localhost
+        security_roles:
+          - superusers
+          - run_only_users
+        api_client_config:
+          # Logger::DEBUG
+          log_level: 0
+      domain: kitchentest
+  - name: default-2.6.9
+    run_list:
+      - recipe[rundeck::server]
+      - recipe[create_chef_dir]
+      - recipe[rundeck::chef-rundeck]
+    attributes:
+      rundeck:
+        rpm:
+          version: rundeck-2.6.9-1.21.GA
+        deb:
+          version: rundeck-2.6.9-1-GA
+        checksum: 363c64a7643ae2e52db6b9d019c8593835123327959ae35c95050708d122066f
+        hostname: localhost
+        security_roles:
+          - superusers
+          - run_only_users
+        api_client_config:
+          # Logger::DEBUG
+          log_level: 0
+      domain: kitchentest
