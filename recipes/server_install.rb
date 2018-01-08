@@ -260,29 +260,8 @@ service 'rundeckd' do
     end
   end
   action [:start, :enable]
-  notifies :run, 'ruby_block[wait for rundeckd startup]', :immediately
 end
 
-ruby_block 'wait for rundeckd startup' do
-  action :nothing
-  block do
-    # test connection to the authentication endpoint
-    require 'uri'
-    require 'net/http'
-    uri = URI("#{node['rundeck']['grails_server_url']}:#{node['rundeck']['grails_port']}")
-    uri.path = ::File.join(node['rundeck']['webcontext'], '/j_security_check')
-    res = Net::HTTP.get_response(uri)
-    unless (200..399).cover?(res.code.to_i)
-      Chef::Log.warn { "#{res.uri} not responding healthy. #{res.code}" }
-      Chef::Log.debug { res.body }
-      raise
-    end
-    Chef::Log.info { 'wait a little longer for Rundeck startup' }
-    sleep node['rundeck']['service']['extra_wait']
-  end
-  retries node['rundeck']['service']['retries']
-  retry_delay node['rundeck']['service']['retry_delay']
-end
 
 Chef::Log.info { "chef-rundeck url: #{node['rundeck']['chef_rundeck_url']}" }
 
