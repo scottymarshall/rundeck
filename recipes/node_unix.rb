@@ -52,8 +52,3 @@ file "#{node['rundeck']['user_home']}/.ssh/authorized_keys" do
   backup false
   content node.run_state['rundeck']['data_bag']['secure']['public_key']
 end
-
-sudo 'rundeck-admin' do
-  user node['rundeck']['user']
-  nopasswd true
-end

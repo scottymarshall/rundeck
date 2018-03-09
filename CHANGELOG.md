@@ -1,6 +1,9 @@
 Changelog
 =========
 
+# 4.2.1
+* Removed sudo
+
 ## 4.2.0
 * Add optional LDAP data bag support
 * Support Rundeck 2.9.x

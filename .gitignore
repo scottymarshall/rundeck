@@ -20,6 +20,7 @@ _Store
 *.bk
 *.bkup
 .DS_Store
+.idea/
 
 # ruby/bundler files
 .ruby-version
@@ -33,7 +34,6 @@ Gemfile.lock
 .yardoc
 _yardoc
 doc/
-.idea
 
 # chef stuff
 Berksfile.lock
